@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Generatore password aziendali</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EEF2; --surface:#FFFFFF; --ink:#16202B; --muted:#5B6875; --line:#C9D3DC;
+  --accent:#1F4FD6; --accent-ink:#FFFFFF;
+  --c-upper:#0F766E; --c-digit:#1F4FD6; --c-sym:#B4471A;
+  --ok:#15803D; --bad:#B91C1C; --field:#F4F7F9;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10161D; --surface:#18212B; --ink:#E6EDF3; --muted:#93A1AF; --line:#2A3642;
+    --accent:#7FA2FF; --accent-ink:#0B1220;
+    --c-upper:#5EC4B6; --c-digit:#8FB0FF; --c-sym:#F59E6B;
+    --ok:#4ADE80; --bad:#F87171; --field:#121A22;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10161D; --surface:#18212B; --ink:#E6EDF3; --muted:#93A1AF; --line:#2A3642;
+  --accent:#7FA2FF; --accent-ink:#0B1220;
+  --c-upper:#5EC4B6; --c-digit:#8FB0FF; --c-sym:#F59E6B;
+  --ok:#4ADE80; --bad:#F87171; --field:#121A22;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:400 16px/1.5 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:32px 20px 48px}
+header h1{font-size:1.75rem; font-weight:600; margin:0 0 4px; letter-spacing:-.01em}
+header p{margin:0; color:var(--muted); max-width:60ch}
+.grid{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:24px; margin-top:28px; align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+.panel{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:24px}
+
+.seg{display:inline-flex; border:1px solid var(--line); border-radius:8px; padding:3px; background:var(--field)}
+.seg button{border:0; background:transparent; color:var(--muted); font:inherit; font-weight:500; padding:6px 14px; border-radius:6px; cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface); color:var(--ink); box-shadow:0 0 0 1px var(--line)}
+
+.pw{
+  font-family:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size:clamp(1.4rem, 4.2vw, 2.25rem); line-height:1.25; font-weight:400;
+  margin:22px 0 18px; padding:20px 18px; border-radius:8px; background:var(--field);
+  border:1px solid var(--line); word-break:break-all; min-height:3.2em; letter-spacing:.02em;
+}
+.pw .u{color:var(--c-upper); font-weight:600}
+.pw .d{color:var(--c-digit); font-weight:600}
+.pw .s{color:var(--c-sym); font-weight:600}
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-size:.8125rem; color:var(--muted); margin-top:-8px; margin-bottom:18px}
+.legend span::before{content:""; display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:6px; vertical-align:1px; background:currentColor}
+.legend .u{color:var(--c-upper)} .legend .d{color:var(--c-digit)} .legend .s{color:var(--c-sym)}
+.legend em{font-style:normal; color:var(--muted)}
+
+.actions{display:flex; gap:10px; flex-wrap:wrap}
+.btn{font:inherit; font-weight:500; border-radius:8px; padding:10px 18px; cursor:pointer; border:1px solid var(--line); background:var(--surface); color:var(--ink)}
+.btn.primary{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+.btn:hover{filter:brightness(.97)}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+.strength{margin:22px 0 6px; display:flex; justify-content:space-between; font-size:.875rem; color:var(--muted)}
+.bar{height:6px; background:var(--field); border:1px solid var(--line); border-radius:4px; overflow:hidden}
+.bar i{display:block; height:100%; width:0; background:var(--accent); transition:width .25s}
+
+.checks{list-style:none; padding:0; margin:22px 0 0; display:grid; gap:6px}
+.checks li{display:flex; gap:10px; align-items:baseline; font-size:.9375rem}
+.checks li::before{content:"✓"; color:var(--ok); font-weight:600; width:1em; flex:none}
+.checks li.no::before{content:"✗"; color:var(--bad)}
+.checks li.no{color:var(--bad)}
+
+h2{font-size:1rem; font-weight:600; margin:0 0 12px}
+.alts{margin-top:28px}
+.alts ul{list-style:none; padding:0; margin:0; display:grid; gap:6px}
+.alts button{
+  width:100%; text-align:left; font-family:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; font-size:.9375rem;
+  background:transparent; color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:8px 12px; cursor:pointer; word-break:break-all;
+}
+.alts button:hover{background:var(--field)}
+
+.msg{margin-top:14px; padding:10px 12px; border-radius:6px; border:1px solid var(--bad); color:var(--bad); font-size:.9375rem}
+.msg[hidden]{display:none}
+
+fieldset{border:0; padding:0; margin:0 0 22px}
+legend{font-weight:600; font-size:.9375rem; margin-bottom:10px; padding:0}
+.row{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; font-size:.9375rem}
+.row label{flex:1}
+input[type=number]{width:72px}
+input[type=number], input[type=text], textarea{
+  font:inherit; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:6px; padding:6px 8px;
+}
+input[type=text], textarea{width:100%}
+input.mono, textarea{font-family:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; font-size:.9375rem}
+textarea{min-height:84px; resize:vertical}
+.hint{font-size:.8125rem; color:var(--muted); margin:6px 0 0}
+input[type=checkbox]{width:18px; height:18px; accent-color:var(--accent)}
+.check{display:flex; gap:10px; align-items:center; font-size:.9375rem; margin-bottom:8px}
+
+.toast{position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); background:var(--ink); color:var(--surface); padding:8px 16px; border-radius:6px; font-size:.9375rem; opacity:0; transition:opacity .2s; pointer-events:none}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion: reduce){.bar i,.toast{transition:none}}
+.check.sub{margin:-2px 0 12px; font-size:.875rem; color:var(--muted)}
+.lbl{display:block; font-size:.9375rem; margin:10px 0 4px}
+input[type=password]{font:inherit; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:6px; padding:6px 8px; width:100%}
+.checks li.na::before{content:"–"; color:var(--muted)}
+.checks li.na{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Nuova password</h1>
+    <p>Una piccola frase da ricordare, come «La volpe compra 4 pere rosse», che rispetta le regole aziendali qui a destra. Generata nel tuo browser. Nessuna password viene inviata o salvata; vengono ricordate solo le regole.</p>
+  </header>
+
+  <div class="grid">
+    <section class="panel" aria-label="Password generata">
+      <div class="seg" role="group" aria-label="Tipo di password">
+        <button type="button" data-mode="random" aria-pressed="false">Casuale</button>
+        <button type="button" data-mode="words" aria-pressed="true">Frase</button>
+      </div>
+
+      <div class="pw" id="pw" aria-live="polite"></div>
+      <div class="legend"><span class="u">Maiuscole</span><span class="d">Numeri</span><span class="s">Simboli</span></div>
+
+      <div class="actions">
+        <button class="btn primary" id="copy" type="button">Copia</button>
+        <button class="btn" id="again" type="button">Genera un'altra</button>
+      </div>
+
+      <div class="strength"><span id="strLabel">Robustezza</span><span id="bits"></span></div>
+      <div class="bar"><i id="barFill"></i></div>
+
+      <ul class="checks" id="checks"></ul>
+      <div class="msg" id="msg" hidden></div>
+
+      <div class="alts">
+        <h2>Altre proposte</h2>
+        <ul id="alts"></ul>
+      </div>
+    </section>
+
+    <aside class="panel" aria-label="Regole aziendali">
+      <h2>Regole aziendali</h2>
+
+      <fieldset>
+        <legend>Lunghezza</legend>
+        <div class="row"><label for="minLen">Minimo caratteri</label><input type="number" id="minLen" min="4" max="128"></div>
+        <div class="row"><label for="maxLen">Massimo caratteri</label><input type="number" id="maxLen" min="4" max="128"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Composizione</legend>
+        <div class="row"><label for="minUpper">Maiuscole, almeno</label><input type="number" id="minUpper" min="0" max="20"></div>
+        <div class="row"><label for="minLower">Minuscole, almeno</label><input type="number" id="minLower" min="0" max="20"></div>
+        <div class="row"><label for="minDigit">Numeri</label><input type="number" id="minDigit" min="0" max="20"></div>
+        <label class="check sub"><input type="checkbox" id="exactDigit"> Esattamente questo numero, non di più</label>
+        <div class="row"><label for="minSym">Simboli</label><input type="number" id="minSym" min="0" max="20"></div>
+        <label class="check sub"><input type="checkbox" id="exactSym"> Esattamente questo numero, non di più</label>
+      </fieldset>
+
+      <fieldset>
+        <legend><label for="symbols">Simboli consentiti</label></legend>
+        <input type="text" class="mono" id="symbols" spellcheck="false" autocomplete="off">
+        <p class="hint">Solo questi simboli verranno usati.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Divieti</legend>
+        <div class="row"><label for="maxRepeat">Caratteri uguali di fila, al massimo</label><input type="number" id="maxRepeat" min="0" max="10"></div>
+        <div class="row"><label for="seqLen">Vieta sequenze lunghe (abc, 321, qwe)</label><input type="number" id="seqLen" min="0" max="10"></div>
+        <p class="hint">Metti 0 per disattivare una regola.</p>
+        <label class="check"><input type="checkbox" id="noPalin"> Non può essere palindroma</label>
+        <label for="noEnd" class="lbl">Simboli vietati come ultimo carattere</label>
+        <input type="text" class="mono" id="noEnd" spellcheck="false" autocomplete="off">
+        <label class="check"><input type="checkbox" id="noAmbig"> Evita caratteri che si confondono (0 O 1 l I)</label>
+      </fieldset>
+
+      <fieldset>
+        <legend><label for="banned">Pattern vietati</label></legend>
+        <textarea id="banned" spellcheck="false" placeholder="Uno per riga: nome, cognome, nome azienda, mesi, stagioni…"></textarea>
+        <p class="hint">Non fa differenza tra maiuscole e minuscole.</p>
+      </fieldset>
+
+      <button class="btn" id="reset" type="button">Ripristina regole predefinite</button>
+    </aside>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+  const DEFAULTS = {
+    mode:"words", minLen:12, maxLen:24, minUpper:1, minLower:1,
+    minDigit:1, exactDigit:true, minSym:1, exactSym:true,
+    symbols:"-_!", maxRepeat:1, seqLen:3, noPalin:true, noAmbig:true,
+    noEnd:"-_",
+    banned:"password\nqwerty\nadmin\nwelcome\nabc123"
+  };
+  const KEY = "pwgen-rules-v2";
+
+  const KEYBOARD = ["qwertyuiop","asdfghjkl","zxcvbnm","1234567890","qwertzuiop","azertyuiop"];
+  const AMBIG = "0O1lI|";
+
+  // ---------- random sicuro ----------
+  function randInt(n){
+    if(n<=0) return 0;
+    const max = Math.floor(0x100000000 / n) * n;
+    const a = new Uint32Array(1);
+    let x;
+    do { crypto.getRandomValues(a); x = a[0]; } while (x >= max);
+    return x % n;
+  }
+  const pick = s => s[randInt(s.length)];
+  function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=randInt(i+1); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+
+  // ---------- stato ----------
+  let rules = load();
+  function load(){
+    try{ const raw = localStorage.getItem(KEY); if(raw) return Object.assign({}, DEFAULTS, JSON.parse(raw)); }catch(e){}
+    return Object.assign({}, DEFAULTS);
+  }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(rules)); }catch(e){} }
+
+  const $ = id => document.getElementById(id);
+  const numFields = ["minLen","maxLen","minUpper","minLower","minDigit","minSym","maxRepeat","seqLen"];
+  const boolFields = ["exactDigit","exactSym","noPalin","noAmbig"];
+
+  function toForm(){
+    numFields.forEach(k => $(k).value = rules[k]);
+    boolFields.forEach(k => $(k).checked = rules[k]);
+    $("symbols").value = rules.symbols;
+    $("banned").value = rules.banned;
+    $("noEnd").value = rules.noEnd;
+    document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode===rules.mode)));
+  }
+  function fromForm(){
+    numFields.forEach(k => { const v = parseInt($(k).value,10); rules[k] = isNaN(v) ? 0 : Math.max(0,v); });
+    boolFields.forEach(k => rules[k] = $(k).checked);
+    rules.symbols = [...new Set([...$("symbols").value].filter(c => !/[A-Za-z0-9\s]/.test(c)))].join("");
+    rules.banned = $("banned").value;
+    rules.noEnd = [...new Set([...$("noEnd").value].filter(c => !/\s/.test(c)))].join("");
+  }
+  const bannedList = () => rules.banned.split(/[\n,;]+/).map(s=>s.trim().toLowerCase()).filter(s=>s.length>=3);
+
+  function pools(){
+    const strip = s => rules.noAmbig ? [...s].filter(c=>!AMBIG.includes(c)).join("") : s;
+    return {
+      lower: strip("abcdefghijklmnopqrstuvwxyz"),
+      upper: strip("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+      digit: strip("0123456789"),
+      sym:   strip(rules.symbols)
+    };
+  }
+
+  // ---------- controlli ----------
+  function hasSequence(pw, n){
+    if(n<2) return false;
+    const s = pw.toLowerCase();
+    for(let i=0;i+n<=s.length;i++){
+      const w = s.slice(i,i+n);
+      if(/^[a-z]+$/.test(w) || /^[0-9]+$/.test(w)){
+        let up=true, down=true;
+        for(let j=1;j<n;j++){
+          const d = w.charCodeAt(j)-w.charCodeAt(j-1);
+          if(d!==1) up=false; if(d!==-1) down=false;
+        }
+        if(up||down) return true;
+      }
+      const rev = [...w].reverse().join("");
+      if(KEYBOARD.some(r => r.includes(w) || r.includes(rev))) return true;
+    }
+    return false;
+  }
+  function maxRun(pw){
+    const s = pw.toLowerCase(); // prudente: "oO" conta come ripetizione
+    let best=0, cur=0;
+    for(let i=0;i<s.length;i++){ cur = (i>0 && s[i]===s[i-1]) ? cur+1 : 1; best=Math.max(best,cur); }
+    return best;
+  }
+  function sharesRun(pw, other, n){
+    if(!other || n<1 || other.length<n) return false;
+    const a = pw.toLowerCase(), b = other.toLowerCase();
+    for(let i=0;i+n<=b.length;i++) if(a.includes(b.slice(i,i+n))) return true;
+    return false;
+  }
+  const isPalin = pw => { const s = pw.toLowerCase(); return s.length>1 && s === [...s].reverse().join(""); };
+  const count = (pw, re) => (pw.match(re)||[]).length;
+  const symCount = pw => [...pw].filter(c=>rules.symbols.includes(c)).length;
+  const plural = (n, one, many) => n===1 ? one : many;
+
+  function checks(pw){
+    const r = rules, out = [];
+    const len = [...pw].length;
+    out.push({t:`Tra ${r.minLen} e ${r.maxLen} caratteri (ora ${len})`, ok: len>=r.minLen && len<=r.maxLen});
+    if(r.minUpper) out.push({t:`Almeno ${r.minUpper} ${plural(r.minUpper,"maiuscola","maiuscole")}`, ok: count(pw,/[A-Z]/g)>=r.minUpper});
+    if(r.minLower) out.push({t:`Almeno ${r.minLower} ${plural(r.minLower,"minuscola","minuscole")}`, ok: count(pw,/[a-z]/g)>=r.minLower});
+    if(r.minDigit || r.exactDigit){
+      const c = count(pw,/[0-9]/g);
+      out.push({t:`${r.exactDigit?"Esattamente":"Almeno"} ${r.minDigit} ${plural(r.minDigit,"numero","numeri")}`, ok: r.exactDigit ? c===r.minDigit : c>=r.minDigit});
+    }
+    if(r.minSym || r.exactSym){
+      const c = symCount(pw);
+      out.push({t:`${r.exactSym?"Esattamente":"Almeno"} ${r.minSym} ${plural(r.minSym,"simbolo","simboli")}`, ok: r.exactSym ? c===r.minSym : c>=r.minSym});
+    }
+    out.push({t:`Solo simboli consentiti (${r.symbols.split("").join(" ") || "nessuno"})`, ok: [...pw].every(c => /[A-Za-z0-9]/.test(c) || r.symbols.includes(c))});
+    if(r.maxRepeat) out.push({t: r.maxRepeat===1 ? "Nessun carattere ripetuto di fila" : `Mai più di ${r.maxRepeat} caratteri uguali di fila`, ok: maxRun(pw)<=r.maxRepeat});
+    if(r.noPalin) out.push({t:"Non è palindroma", ok: !isPalin(pw)});
+    if(r.noEnd) out.push({t:`Non finisce con ${[...r.noEnd].join(" o ")}`, ok: !r.noEnd.includes(pw.slice(-1))});
+    if(r.seqLen>=2) out.push({t:`Nessuna sequenza di ${r.seqLen} caratteri (abc, 321, qwe)`, ok: !hasSequence(pw,r.seqLen)});
+    const b = bannedList();
+    if(b.length) out.push({t:"Nessun pattern vietato", ok: !b.some(w => pw.toLowerCase().includes(w))});
+    return out;
+  }
+  const valid = pw => checks(pw).every(c=>c.na || c.ok);
+
+  function ruleProblems(){
+    const r = rules, p = pools(), probs = [];
+    if(r.minLen > r.maxLen) probs.push("La lunghezza minima è maggiore della massima.");
+    const need = r.minUpper + r.minLower + r.minDigit + r.minSym;
+    if(need > r.maxLen) probs.push(`I minimi richiesti sommano ${need} caratteri, più della lunghezza massima (${r.maxLen}).`);
+    if(r.minSym && !p.sym.length) probs.push("Servono simboli ma l'elenco dei simboli consentiti è vuoto.");
+    return probs;
+  }
+
+  // ---------- generatori ----------
+  function nDigits(){ return rules.exactDigit ? rules.minDigit : Math.max(rules.minDigit, 2); }
+
+  function genRandom(){
+    const r = rules, p = pools();
+    const len = Math.min(r.maxLen, Math.max(r.minLen, 16));
+    const nd = nDigits();
+    const ns = r.exactSym ? r.minSym : Math.max(r.minSym, 1);
+    const fill = p.lower + p.upper + (r.exactDigit ? "" : p.digit) + (r.exactSym ? "" : p.sym);
+    const chars = [];
+    for(let i=0;i<r.minUpper;i++) chars.push(pick(p.upper));
+    for(let i=0;i<r.minLower;i++) chars.push(pick(p.lower));
+    for(let i=0;i<nd;i++) chars.push(pick(p.digit));
+    for(let i=0;i<ns;i++) chars.push(pick(p.sym));
+    const fixed = chars.length;
+    while(chars.length<len) chars.push(pick(fill));
+    const pw = shuffle(chars).join("");
+    // stima prudente: caratteri liberi + classi obbligatorie + posizioni
+    const bits = (len-fixed)*Math.log2(fill.length) + r.minUpper*Math.log2(p.upper.length) + r.minLower*Math.log2(p.lower.length)
+      + nd*Math.log2(p.digit.length) + ns*Math.log2(Math.max(p.sym.length,1)) + Math.log2(len)*(nd+ns);
+    return {pw, bits};
+  }
+
+  // ---------- frasi di senso compiuto ----------
+  // soggetti: [articolo, nome, genere]
+  const SUBJ = [
+    ["Il","gufo","m"],["La","volpe","f"],["Il","lupo","m"],["La","rana","f"],["Il","leone","m"],["La","tigre","f"],
+    ["Il","panda","m"],["La","lepre","f"],["Il","riccio","m"],["La","balena","f"],["Il","delfino","m"],["La","zebra","f"],
+    ["Il","pinguino","m"],["La","tartaruga","f"],["Il","cigno","m"],["La","formica","f"],["Il","granchio","m"],["La","lumaca","f"],
+    ["Il","merlo","m"],["La","talpa","f"],["Il","koala","m"],["La","giraffa","f"],["Il","canguro","m"],["La","medusa","f"],
+    ["Il","polpo","m"],["La","pantera","f"],["Il","bruco","m"],["La","cicogna","f"],["Il","castoro","m"],["La","foca","f"],
+    ["Il","topo","m"],["La","capra","f"],["Il","criceto","m"],["La","pecora","f"],["Il","falco","m"],["La","gazza","f"],
+    ["Lo","squalo","m"],["Il","camaleonte","m"],["La","mucca","f"],["Il","pony","m"],
+    ["Il","pirata","m"],["La","strega","f"],["Il","mago","m"],["La","fata","f"],["Il","cuoco","m"],["La","nonna","f"],
+    ["Il","pittore","m"],["La","regina","f"],["Il","robot","m"],["Il","vichingo","m"],["La","maestra","f"],["Il","postino","m"],
+    ["Il","sindaco","m"],["La","sirena","f"],["Il","gigante","m"],["La","principessa","f"],["Il","dottore","m"],["La","pilota","f"]
+  ];
+  const mkAdj = s => { const [st,t] = s.split(" ");
+    if(t==="o")  return {m:st+"o", f:st+"a", mp:st+"i",   fp:st+"e"};
+    if(t==="e")  return {m:st+"e", f:st+"e", mp:st+"i",   fp:st+"i"};
+    if(t==="co") return {m:st+"co",f:st+"ca",mp:st+"chi", fp:st+"che"};
+    if(t==="ci") return {m:st+"co",f:st+"ca",mp:st+"ci",  fp:st+"che"};
+    if(t==="io") return {m:st+"io",f:st+"ia",mp:st+"i",   fp:st+"ie"};
+  };
+  const SUBJ_ADJ = ["allegr o","curios o","furb o","pigr o","timid o","gol os o","buff o","ner o","grig io","dorat o",
+    "tranquill o","coraggios o","distratt o","elegant e","felic e","gentil e","veloc e","pazient e","vivac e","affamat o",
+    "assonnat o","sorridente e","famos o","sapient e","stanc co","simpati ci","romanti ci","misterios o"]
+    .map(s => mkAdj(s.replace("gol os","golos").replace("sorridente e","sorrident e")));
+  const OBJ_ADJ = ["ross o","verd e","giall o","dorat o","piccol o","gigant e","nuov o","vecch io","stran o","anti co",
+    "segret o","colorat o","special e","perfett o","fresc co","lucid o","rar o","magi ci"]
+    .map(mkAdj);
+  // oggetti al plurale: [parola, genere]
+  const OBJ = {
+    cibo:[["mele","f"],["pere","f"],["banane","f"],["fragole","f"],["ciliegie","f"],["carote","f"],["patate","f"],["noci","f"],
+      ["olive","f"],["arance","f"],["pizze","f"],["torte","f"],["frittelle","f"],["biscotti","m"],["panini","m"],["limoni","m"],
+      ["meloni","m"],["funghi","m"],["gelati","m"],["cornetti","m"],["pomodori","m"],["fichi","m"],["kiwi","m"],["mirtilli","m"],
+      ["peperoni","m"],["ravioli","m"],["tortelli","m"],["cioccolatini","m"]],
+    carta:[["libri","m"],["lettere","f"],["cartoline","f"],["fumetti","m"],["poesie","f"],["mappe","f"],["ricette","f"],
+      ["giornali","m"],["romanzi","m"],["diari","m"],["biglietti","m"],["quaderni","m"],["francobolli","m"]],
+    cose:[["sassi","m"],["bottoni","m"],["palloncini","m"],["cappelli","m"],["ombrelli","m"],["chiavi","f"],["stelle","f"],
+      ["conchiglie","f"],["piume","f"],["candele","f"],["scarpe","f"],["calzini","m"],["bicchieri","m"],["matite","f"],
+      ["monete","f"],["ghiande","f"],["barche","f"],["aquiloni","m"],["lanterne","f"],["tazze","f"],["orologi","m"],
+      ["pentole","f"],["sedie","f"],["valigie","f"],["chitarre","f"],["biciclette","f"],["cuscini","m"],["vasi","m"]]
+  };
+  const ALL = ["cibo","carta","cose"];
+  const VERB_T = [
+    ["mangia",["cibo"]],["cucina",["cibo"]],["prepara",["cibo"]],["assaggia",["cibo"]],["divora",["cibo","carta"]],
+    ["compra",ALL],["vende",ALL],["legge",["carta"]],["scrive",["carta"]],["spedisce",["carta","cose"]],["firma",["carta"]],
+    ["stampa",["carta"]],["colleziona",["carta","cose"]],["conta",ALL],["porta",ALL],["trova",ALL],["nasconde",ALL],
+    ["regala",ALL],["dipinge",["cose"]],["lancia",["cose"]],["ripara",["cose"]],["lava",["cose","cibo"]],["colora",["carta","cose"]],
+    ["raccoglie",["cibo","cose"]],["perde",["carta","cose"]],["presta",["carta","cose"]],["disegna",["cose","cibo"]],["cerca",ALL]
+  ];
+  const VERB_I = ["balla","canta","dorme","corre","nuota","ride","sogna","cena","pranza","arriva","parte","torna","medita",
+    "passeggia","studia","lavora","pesca","gioca","scia","suona"];
+  const PLACES = ["AlParco","AlMare","InCucina","InGiardino","NelBosco","SulTetto","InBiblioteca","InPiscina","AlCinema",
+    "InCantina","SulPonte","InMontagna","AlMuseo","InTreno","InSoffitta","AlMercato","InUfficio","AlPorto","InBarca","InSpiaggia"];
+
+  function phraseLists(){
+    const n = rules.maxRepeat;
+    const re = n ? new RegExp("(.)" + "\\1".repeat(n), "i") : null;
+    const ok = s => !re || !re.test(s);
+    const okAdj = a => ok(a.m) && ok(a.f) && ok(a.mp) && ok(a.fp);
+    const obj = {};
+    for(const k of ALL) obj[k] = OBJ[k].filter(o => ok(o[0]));
+    return {
+      subj: SUBJ.filter(s => ok(s[1]) && ok(s[0]+s[1])),
+      sadj: SUBJ_ADJ.filter(okAdj),
+      oadj: OBJ_ADJ.filter(okAdj),
+      obj,
+      vt: VERB_T.filter(v => ok(v[0])),
+      vi: VERB_I.filter(ok),
+      places: PLACES.filter(ok)
+    };
+  }
+
+  function genWords(){
+    const r = rules, p = pools(), L = phraseLists();
+    const nd = nDigits();
+    const ns = r.exactSym ? r.minSym : Math.max(r.minSym, 1);
+    const digitPool = p.digit || "23456789";
+    const symPool = p.sym;
+    let bits = 0;
+    const choose = arr => { bits += Math.log2(arr.length); return pick(arr); };
+    const coin = () => { bits += 1; return randInt(2)===1; };
+    const cap = s => s[0].toUpperCase() + s.slice(1);
+    const okDigits = s => [...s].every(c => digitPool.includes(c));
+
+    // numero come quantità (almeno 2, così il plurale ha senso)
+    function quantity(){
+      if(nd===0) return "";
+      const c = [];
+      const lo = nd===1 ? 2 : Math.pow(10, nd-1), hi = Math.pow(10, nd) - 1;
+      if(hi - lo < 5000){ for(let i=lo;i<=hi;i++){ const s=String(i); if(okDigits(s)) c.push(s); } }
+      else { let s; do { s = String(lo + randInt(hi-lo+1)); } while(!okDigits(s)); bits += Math.log2(hi-lo+1); return s; }
+      return c.length ? choose(c) : null;
+    }
+    // numero come ora del giorno
+    function hour(){
+      const c = [];
+      for(let h=2; h<=23; h++){ const s=String(h); if(s.length===nd && okDigits(s)) c.push(s); }
+      return c.length ? choose(c) : null;
+    }
+
+    const [art, noun, g] = choose(L.subj);
+    const parts = [art, cap(noun)];
+    if(coin() && L.sadj.length) parts.push(cap(choose(L.sadj)[g]));
+    const afterSubject = parts.length;
+
+    let useTime = nd>=1 && nd<=2 && coin();
+    let h = useTime ? hour() : null;
+    if(useTime && !h) useTime = false;
+
+    let numIndex;
+    if(useTime){
+      parts.push(cap(choose(L.vi)));
+      if(coin()) parts.push(choose(L.places));
+      numIndex = parts.length;
+      parts.push("Alle" + h);
+    } else {
+      const [verb, cats] = choose(L.vt);
+      const objs = cats.flatMap(c => L.obj[c]);
+      const [obj, og] = choose(objs);
+      const q = quantity(); if(q===null) return {pw:"", bits:0};
+      parts.push(cap(verb));
+      numIndex = parts.length;
+      if(q) parts.push(q);
+      parts.push(cap(obj));
+      if(coin() && L.oadj.length) parts.push(cap(choose(L.oadj)[og+"p"]));
+    }
+
+    // simboli: "!" in fondo come un'esclamazione, gli altri come separatori
+    const ins = {};
+    const add = (i, s) => { ins[i] = (ins[i]||"") + s; };
+    for(let i=0;i<ns;i++){
+      const s = choose([...symPool]);
+      if(s === "!") add(parts.length, s);
+      else { const spots = [afterSubject, numIndex];
+        if(!(rules.noEnd||"").includes(s)) spots.push(parts.length); add(choose(spots), s); }
+    }
+    let pw = "";
+    for(let i=0;i<=parts.length;i++){ if(ins[i]) pw += ins[i]; if(i<parts.length) pw += parts[i]; }
+
+    let arr = [...pw], guard = 0;
+    while(count(arr.join(""),/[A-Z]/g) < r.minUpper && guard++<50){
+      const i = randInt(arr.length);
+      if(/[a-z]/.test(arr[i])) arr[i] = arr[i].toUpperCase();
+    }
+    return {pw: arr.join(""), bits};
+  }
+
+  function generate(){
+    const gen = rules.mode==="random" ? genRandom : genWords;
+    for(let i=0;i<4000;i++){
+      const res = gen();
+      if(valid(res.pw)) return res;
+    }
+    return null;
+  }
+
+  // ---------- UI ----------
+  let current = null;
+  function render(res){
+    const pwEl = $("pw"), msg = $("msg");
+    const probs = ruleProblems();
+    if(!res){
+      pwEl.textContent = "—";
+      msg.hidden = false;
+      msg.textContent = probs.length ? probs.join(" ") :
+        "Nessuna password rispetta tutte le regole insieme. Prova ad allungare la lunghezza massima o ad allentare un divieto" +
+        (rules.mode==="words" ? ", oppure passa a Casuale." : ".");
+      $("checks").innerHTML = ""; $("bits").textContent = ""; $("barFill").style.width="0";
+      current = null; return;
+    }
+    msg.hidden = true;
+    current = res;
+    pwEl.innerHTML = "";
+    for(const c of res.pw){
+      const span = document.createElement("span");
+      span.textContent = c;
+      if(/[A-Z]/.test(c)) span.className="u";
+      else if(/[0-9]/.test(c)) span.className="d";
+      else if(!/[a-z]/.test(c)) span.className="s";
+      pwEl.appendChild(span);
+    }
+    const b = Math.round(res.bits);
+    const label = b<40 ? "Accettabile con blocco dei tentativi" : b<60 ? "Buona" : b<80 ? "Robusta" : "Molto robusta";
+    $("strLabel").textContent = "Robustezza: " + label;
+    $("bits").textContent = `circa ${b} bit`;
+    $("barFill").style.width = Math.min(100, b) + "%";
+    const ul = $("checks"); ul.innerHTML = "";
+    checks(res.pw).forEach(c => {
+      const li=document.createElement("li"); li.textContent=c.t;
+      if(c.na) li.className="na"; else if(!c.ok) li.className="no";
+      ul.appendChild(li);
+    });
+  }
+
+  function renderAlts(){
+    const ul = $("alts"); ul.innerHTML = "";
+    for(let i=0;i<5;i++){
+      const res = generate(); if(!res) break;
+      const li = document.createElement("li"), btn = document.createElement("button");
+      btn.type="button"; btn.textContent = res.pw; btn.title = "Usa questa";
+      btn.addEventListener("click", () => { render(res); renderAlts(); window.scrollTo({top:0, behavior:"smooth"}); });
+      li.appendChild(btn); ul.appendChild(li);
+    }
+  }
+
+  function refresh(){ render(generate()); renderAlts(); }
+
+  function toast(t){ const el=$("toast"); el.textContent=t; el.classList.add("show"); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove("show"),1600); }
+
+  async function copy(){
+    if(!current) return;
+    try{ await navigator.clipboard.writeText(current.pw); toast("Password copiata"); }
+    catch(e){
+      const range=document.createRange(); range.selectNodeContents($("pw"));
+      const sel=getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      try{ document.execCommand("copy"); toast("Password copiata"); }
+      catch(_){ toast("Selezionata: premi Ctrl+C per copiarla"); }
+    }
+  }
+
+  document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
+    rules.mode = b.dataset.mode; save(); toForm(); refresh();
+  }));
+  $("again").addEventListener("click", refresh);
+  $("copy").addEventListener("click", copy);
+  $("reset").addEventListener("click", () => {
+    const keep = {mode: rules.mode};
+    rules = Object.assign({}, DEFAULTS, keep); save(); toForm(); refresh();
+  });
+  let t;
+  document.querySelector("aside").addEventListener("input", () => {
+    clearTimeout(t); t = setTimeout(() => { fromForm(); save(); refresh(); }, 250);
+  });
+  document.addEventListener("keydown", e => {
+    if(e.target.matches("input,textarea")) return;
+    if(e.key==="g"||e.key==="G") refresh();
+  });
+
+
+  toForm(); refresh();
+})();
+
+</script>
+</body>
+</html>
